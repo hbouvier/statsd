@@ -23,6 +23,13 @@ general values should be integer.
   After the flush interval timeout (default 10 seconds), stats are
   aggregated and sent to an upstream backend service.
 
+Optimization
+------------
+
+* *Multiple stats*
+  To send multiple stats in one UDP packet, concatenate your stats togehter
+  separated by a line-feed (e.g. udp.send('gorets:1|c\nglork:320|ms\ngaugor:333|g'); )
+
 Counting
 --------
 
