@@ -84,52 +84,57 @@ config.configFile(process.argv[2], function (config, oldConfig) {
     // key counting
     var keyFlushInterval = Number((config.keyFlush && config.keyFlush.interval) || 0);
 
-    server = dgram.createSocket('udp4', function (msg, rinfo) {
-      if (config.dumpMessages) { util.log(msg.toString()); }
-      var bits = msg.toString().split(':');
-      var key = bits.shift()
-                    .replace(/\s+/g, '_')
-                    .replace(/\//g, '-')
-                    .replace(/[^a-zA-Z_\-0-9\.]/g, '');
-
-      if (keyFlushInterval > 0) {
-        if (! keyCounter[key]) {
-          keyCounter[key] = 0;
-        }
-        keyCounter[key] += 1;
-      }
-
-      if (bits.length == 0) {
-        bits.push("1");
-      }
-
-      for (var i = 0; i < bits.length; i++) {
-        var sampleRate = 1;
-        var fields = bits[i].split("|");
-        if (fields[1] === undefined) {
-            util.log('Bad line: ' + fields);
-            stats['messages']['bad_lines_seen']++;
-            continue;
-        }
-        if (fields[1].trim() == "ms") {
-          if (! timers[key]) {
-            timers[key] = [];
+    // Multiple messages can be received separated by a \n to optimize
+    // network trafic. As a best practice, the size of the message should be
+    // smaller than the MTU - 28bytes (e.g. packet header size IP=20 + UDP=8)
+    server = dgram.createSocket('udp4', function (msgs, rinfo) {
+      if (config.dumpMessages) { util.log(msgs.toString()); }
+      for (var msg : msgs.toString().split('\n')) {
+        var bits = msg.split(':');
+        var key = bits.shift()
+                      .replace(/\s+/g, '_')
+                      .replace(/\//g, '-')
+                      .replace(/[^a-zA-Z_\-0-9\.]/g, '');
+  
+        if (keyFlushInterval > 0) {
+          if (! keyCounter[key]) {
+            keyCounter[key] = 0;
           }
-          timers[key].push(Number(fields[0] || 0));
-        } else if (fields[1].trim() == "g") {
-          gauges[key] = Number(fields[0] || 0);
-        } else {
-          if (fields[2] && fields[2].match(/^@([\d\.]+)/)) {
-            sampleRate = Number(fields[2].match(/^@([\d\.]+)/)[1]);
-          }
-          if (! counters[key]) {
-            counters[key] = 0;
-          }
-          counters[key] += Number(fields[0] || 1) * (1 / sampleRate);
+          keyCounter[key] += 1;
         }
+  
+        if (bits.length == 0) {
+          bits.push("1");
+        }
+  
+        for (var i = 0; i < bits.length; i++) {
+          var sampleRate = 1;
+          var fields = bits[i].split("|");
+          if (fields[1] === undefined) {
+              util.log('Bad line: ' + fields);
+              stats['messages']['bad_lines_seen']++;
+              continue;
+          }
+          if (fields[1].trim() == "ms") {
+            if (! timers[key]) {
+              timers[key] = [];
+            }
+            timers[key].push(Number(fields[0] || 0));
+          } else if (fields[1].trim() == "g") {
+            gauges[key] = Number(fields[0] || 0);
+          } else {
+            if (fields[2] && fields[2].match(/^@([\d\.]+)/)) {
+              sampleRate = Number(fields[2].match(/^@([\d\.]+)/)[1]);
+            }
+            if (! counters[key]) {
+              counters[key] = 0;
+            }
+            counters[key] += Number(fields[0] || 1) * (1 / sampleRate);
+          }
+        }
+  
+        stats['messages']['last_msg_seen'] = Math.round(new Date().getTime() / 1000);
       }
-
-      stats['messages']['last_msg_seen'] = Math.round(new Date().getTime() / 1000);
     });
 
     mgmtServer = net.createServer(function(stream) {
