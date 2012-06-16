@@ -84,7 +84,7 @@ config.configFile(process.argv[2], function (config, oldConfig) {
     // key counting
     var keyFlushInterval = Number((config.keyFlush && config.keyFlush.interval) || 0);
 
-    server = dgram.createSocket('udp4', function (msgs, rinfo) {
+    server = dgram.createSocket('udp4', function (msg, rinfo) {
       if (config.dumpMessages) { util.log(msg.toString()); }
       var vectorOfMessage = msgs.toString().split('\n');
       var vectorSize = vectorOfMessage.length;
