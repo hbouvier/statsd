@@ -89,7 +89,7 @@ config.configFile(process.argv[2], function (config, oldConfig) {
     // smaller than the MTU - 28bytes (e.g. packet header size IP=20 + UDP=8)
     server = dgram.createSocket('udp4', function (msgs, rinfo) {
       if (config.dumpMessages) { util.log(msgs.toString()); }
-      for (var msg : msgs.toString().split('\n')) {
+      for (var msg in msgs.toString().split('\n')) {
         var bits = msg.split(':');
         var key = bits.shift()
                       .replace(/\s+/g, '_')
