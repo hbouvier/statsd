@@ -61,13 +61,6 @@ StatsD now also supports gauges, arbitrary values, which can be recorded.
 
     gaugor:333|g
 
-Optimization
-------------
-
-* *Multiple stats*
-  To send multiple stats in one UDP packet, concatenate your stats togehter
-  separated by a line-feed (e.g. udp.send('gorets:1|c\nglork:320|ms\ngaugor:333|g'); )
-
 Debugging
 ---------
 
