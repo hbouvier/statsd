@@ -90,8 +90,8 @@ config.configFile(process.argv[2], function (config, oldConfig) {
     server = dgram.createSocket('udp4', function (msgs, rinfo) {
       if (config.dumpMessages) { util.log(msgs.toString()); }
       var vectorOfMessage = msgs.toString().split('\n');
-      var vectorSize = vectorOfMessage.length();
-      for (var index = 0 ; index < vectorSize) {
+      var vectorSize = vectorOfMessage.length;
+      for (var index = 0 ; index < vectorSize ; ++index) {
         var msg = vectorOfMessage[index];
         var bits = msg.split(':');
         var key = bits.shift()
