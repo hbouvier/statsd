@@ -1,0 +1,100 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+  "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html>
+
+<head>
+  <script src="/js/jquery-1.9.1.min.js"></script>
+  <script src="/js/raphael-min.js"></script>
+  <script src="/js/morris.min.js"></script>
+  <script src="/js/jquery.gridster.min.js"></script>
+  <script src="http://localhost:8000/socket.io/socket.io.js"></script>
+
+  <title>Statsd</title>
+
+  <link rel="stylesheet" media="all" href="/css/jquery.gridster.min.css" />
+  <link rel="stylesheet" media="all" href="/css/morris.css" />
+  
+</head>
+
+<body>
+  <h1>Statsd</h1>
+
+  <div class="gridster">
+      <ul style="list-style-type: none;">
+          <li data-row="1" data-col="1" data-sizex="1" data-sizey="1"><div align="center">CPU</div><div id="graph_cpu"></div></li>
+          <li data-row="1" data-col="2" data-sizex="1" data-sizey="1"><div align="center">Free Mem</div><div id="graph_mem"></div></li>
+      </ul>
+  </div>
+
+
+  <script>
+
+
+    function Graph(id, selector, xkey, ykey, label, max, maxPoints) {
+      maxPoints = maxPoints || 60;
+      this.data = [];
+      this.selector = selector;
+      for (var i = 0 ; i < maxPoints ; ++i) {
+        this.data[i] = {time: this.getXLabel(), used:0.0};
+      }
+      this.graph = Morris.Area({
+                      element: id,
+                      data: this.data,
+                      ymin: 0.0,
+                      ymax: max,
+                      pointSize:0,
+                      xkey: xkey,
+                      ykeys: [ykey],
+                      labels: [label],
+                      parseTime: false,
+                      hideHover: true
+                  });
+      return this;
+    }
+
+    Graph.prototype.getXLabel = function() {
+      var now     = new Date();
+      var hours   = now.getHours()
+      var minutes = now.getMinutes()
+      var seconds = now.getSeconds() 
+      seconds     = (seconds < 10) ? '0' + seconds : seconds;
+      minutes     = (minutes < 10) ? '0' + minutes : minutes;
+      hours       = (hours < 10)   ? '0' + hours   : hours;
+      return hours + ':' + minutes + ':' + seconds;
+    };
+
+    Graph.prototype.update = function (all) {
+      console.log(this);
+        var cpu_used = eval('all.' + this.selector);
+        console.log('selector: ' + this.selector + ', cpu: ' + cpu_used);
+        this.data = this.data.splice(1);
+        this.data.push({time: this.getXLabel(), used:cpu_used});
+        this.graph.setData(this.data);
+    };
+
+
+    $(document).ready(function() {
+
+      var gridster = $(".gridster > ul").gridster({
+          widget_margins: [10, 10],
+          widget_base_dimensions: [800, 800],
+          min_cols: 6
+      }).data('gridster');
+
+      var socket    = io.connect('http://localhost:8000');
+      var cpu = new Graph('graph_cpu', "gauges['localhost'].cpu.used", 'time', 'used', 'cpu', 100.0, 60);
+      var mem = new Graph('graph_mem', "gauges['localhost'].memory.free", 'time', 'used', 'mem', 818438.0, 60);
+
+      socket.on('connect', function () {
+        socket.emit('subscribe', 'all');
+      });
+
+      socket.on('all', function (all) {
+        cpu.update(all);
+        mem.update(all);
+      });
+    });
+
+  </script>
+</body>
+</html>
