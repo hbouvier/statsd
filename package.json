@@ -14,6 +14,7 @@
   },
   "version": "0.6.0",
   "dependencies": {
+    "statsd-socket.io" : "latest"
   },
   "devDependencies": {
     "nodeunit": "0.7.x",
